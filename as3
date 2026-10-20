@@ -1,0 +1,91 @@
+sensor = {
+    "ALARM": {"H": 0.90, "S": 0.10},
+    "NORMAL": {"H": 0.10, "S": 0.90}
+}
+
+
+def bayes(prior_h, observation):
+    """Бір бақылаудан кейінгі қауіп ықтималдығы."""
+    likelihood_h = sensor[observation]["H"]
+    likelihood_s = sensor[observation]["S"]
+
+    evidence = (
+        likelihood_h * prior_h
+        + likelihood_s * (1 - prior_h)
+    )
+
+    return likelihood_h * prior_h / evidence
+
+
+def hmm_filter(observations, prior_h=0.20):
+    """Әр уақыт қадамындағы болжам мен жаңартуды есептеу."""
+    posterior_h = prior_h
+    results = []
+
+    for t, observation in enumerate(observations, start=1):
+        # Бастапқы үлестірім t1 бақылауына дейін берілген.
+        if t == 1:
+            predicted_h = prior_h
+        else:
+            predicted_h = (
+                0.80 * posterior_h
+                + 0.10 * (1 - posterior_h)
+            )
+
+        predicted_s = 1 - predicted_h
+
+        unnormalized_h = (
+            sensor[observation]["H"] * predicted_h
+        )
+        unnormalized_s = (
+            sensor[observation]["S"] * predicted_s
+        )
+
+        normalizer = unnormalized_h + unnormalized_s
+
+        posterior_h = unnormalized_h / normalizer
+        posterior_s = unnormalized_s / normalizer
+
+        results.append({
+            "t": t,
+            "observation": observation,
+            "predicted_h": predicted_h,
+            "predicted_s": predicted_s,
+            "normalizer": normalizer,
+            "posterior_h": posterior_h,
+            "posterior_s": posterior_s
+        })
+
+    return results
+
+
+print("A. Байес есебі")
+for observation in ["ALARM", "NORMAL"]:
+    probability = bayes(0.20, observation)
+    print(f"{observation}: P(H|E) = {probability:.6f}")
+
+
+print("\nСезімталдық талдауы")
+for prior in [0.05, 0.20, 0.50, 0.80]:
+    alarm = bayes(prior, "ALARM")
+    normal = bayes(prior, "NORMAL")
+
+    print(
+        f"Бастапқы P(H)={prior:.2f}: "
+        f"ALARM → {alarm:.6f}; "
+        f"NORMAL → {normal:.6f}"
+    )
+
+
+print("\nHMM сүзгілеуі")
+observations = ["ALARM", "NORMAL", "ALARM", "ALARM"]
+
+for row in hmm_filter(observations):
+    print(
+        f"t{row['t']} {row['observation']}: "
+        f"болжам H={row['predicted_h']:.6f}, "
+        f"S={row['predicted_s']:.6f}; "
+        f"Z={row['normalizer']:.6f}; "
+        f"жаңарту H={row['posterior_h']:.6f}, "
+        f"S={row['posterior_s']:.6f}"
+    )
