@@ -1,0 +1,84 @@
+states = ["A", "B", "C"]
+
+# Бастапқы ықтималдықтар
+b0 = [0.5, 0.3, 0.2]
+
+# Ауысу матрицасы
+T = [
+    [0.7, 0.2, 0.1],
+    [0.2, 0.6, 0.2],
+    [0.1, 0.3, 0.6]
+]
+
+# Бақылау моделі
+O = {
+    "RED": [0.8, 0.5, 0.2],
+    "BLUE": [0.2, 0.5, 0.8]
+}
+
+observations = ["RED", "BLUE", "BLUE", "RED"]
+
+
+# 1. Болжау функциясы
+def predict(belief, T):
+    return [
+        sum(belief[i] * T[i][j] for i in range(3))
+        for j in range(3)
+    ]
+
+
+# 2. Жаңарту функциясы
+def update(predicted, observation, O):
+    values = [
+        predicted[i] * O[observation][i]
+        for i in range(3)
+    ]
+
+    total = sum(values)
+
+    return [v / total for v in values]
+
+
+# 3. HMM сүзгілеуі
+def run_hmm(initial, T, O, observations):
+    belief = initial.copy()
+
+    for t, observation in enumerate(observations, 1):
+        predicted = predict(belief, T)
+        belief = update(predicted, observation, O)
+
+        best = states[belief.index(max(belief))]
+
+        print(f"t{t}: {observation}")
+        for i in range(3):
+            print(f"{states[i]}: {belief[i]:.4f}")
+
+        print("Ең ықтимал аймақ:", best)
+        print()
+
+    return belief
+
+
+# Бастапқы эксперимент
+print("Бастапқы модель:")
+original = run_hmm(
+    [0.5, 0.3, 0.2],
+    T, O, observations
+)
+
+# Өзгертілген бастапқы үлестірім
+print("Жаңа эксперимент:")
+changed = run_hmm(
+    [0.2, 0.2, 0.6],
+    T, O, observations
+)
+
+print("Соңғы нәтижелер:")
+
+for i, state in enumerate(states):
+    print(
+        f"{state}: "
+        f"бастапқы={original[i]:.4f}, "
+        f"өзгертілген={changed[i]:.4f}"
+    )
+
